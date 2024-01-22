@@ -29,17 +29,17 @@ def svm_loss_naive(W, X, y, reg):
     num_train = X.shape[0]
     loss = 0.0
     for i in range(num_train):
-        scores = X[i].dot(W)
-        correct_class_score = scores[y[i]]
+        scores = X[i].dot(W)    # (1, C)
+        correct_class_score = scores[y[i]]    # scalar
         for j in range(num_classes):
             if j == y[i]:
                 continue
-            margin = scores[j] - correct_class_score + 1  # note delta = 1
+            margin = scores[j] - correct_class_score + 1
             if margin > 0:
                 loss += margin
 
-                dW[:, j] += X[i]  
-                dW[:, y[i]] -= X[i] 
+                dW[:, j] += X[i]    # incorrect classes
+                dW[:, y[i]] -= X[i]   # correct class
 
     # Right now the loss is a sum over all training examples, but we want it
     # to be an average instead so we divide by num_train.
@@ -84,10 +84,11 @@ def svm_loss_vectorized(W, X, y, reg):
     # compute the loss and the gradient
     num_train = X.shape[0]
 
-    scores = np.matmul(X, W)
-    correct_class_scores = scores[np.arange(num_train), y]
-    margins = np.maximum(0, scores - correct_class_scores[:, np.newaxis] + 1)
-    margins[np.arange(num_train), y] = 0 # i == j
+    scores = np.matmul(X, W)    # (N, C)
+    correct_class_scores = scores[np.arange(num_train), y]    # (N,)
+
+    margins = np.maximum(0, scores - correct_class_scores[:, np.newaxis] + 1)   # (N, C)   
+    margins[np.arange(num_train), y] = 0    # i == j
 
     loss = np.sum(margins) / num_train + reg * np.sum(W * W)
 
@@ -104,9 +105,8 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    margins_ = np.zeros(margins.shape)
-    margins_[margins > 0] = 1   # where predicted correctly
-    margins_[np.arange(num_train), y] -= np.sum(margins_, axis = 1)
+    margins_ = (margins > 0).astype(int)    # (N, C), for incorrect classes 
+    margins_[np.arange(num_train), y] -= np.sum(margins_, axis = 1)   # for correct class
     
     dW = np.matmul(X.T, margins_) / num_train + 2 * reg * W
 
